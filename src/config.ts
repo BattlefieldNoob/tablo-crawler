@@ -9,6 +9,10 @@ export interface AppConfig {
   minParticipants: number;
   maxDistance: number; // km
   intervalSeconds: number; // for loop mode
+  // Location and search parameters
+  latitude: string;
+  longitude: string;
+  searchRadius: string; // km
   // User monitoring configuration
   userIdsFilePath: string;
   stateFilePath: string;
@@ -27,6 +31,10 @@ export function buildConfig(partial: Partial<AppConfig>): AppConfig {
     minParticipants: partial.minParticipants ?? Number(Bun.env.MIN_PARTICIPANTS ?? 2),
     maxDistance: partial.maxDistance ?? Number(Bun.env.MAX_DISTANCE ?? 10.0),
     intervalSeconds: partial.intervalSeconds ?? Number(Bun.env.INTERVAL_SECONDS ?? 300),
+    // Location and search parameters (defaults to Padova, Italy)
+    latitude: partial.latitude ?? Bun.env.SEARCH_LATITUDE ?? "45.408153",
+    longitude: partial.longitude ?? Bun.env.SEARCH_LONGITUDE ?? "11.875273",
+    searchRadius: partial.searchRadius ?? Bun.env.SEARCH_RADIUS ?? "4",
     // User monitoring configuration
     userIdsFilePath: partial.userIdsFilePath ?? Bun.env.USER_IDS_FILE_PATH ?? "monitored-users.txt",
     stateFilePath: partial.stateFilePath ?? Bun.env.STATE_FILE_PATH ?? "monitoring-state.json",

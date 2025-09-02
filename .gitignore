@@ -67,6 +67,9 @@ jspm_packages/
 .env.test.local
 .env.production.local
 
+# Keep example env file
+!.env.example
+
 # parcel-bundler cache
 .cache
 .parcel-cache
@@ -122,3 +125,14 @@ coverage/
 # Local configuration files that might contain sensitive data
 config.local.*
 *.local
+
+# User monitoring files (may contain sensitive user IDs)
+monitored-users.txt
+monitoring-state.json
+test-monitoring-state.json
+*-monitoring-state.json
+
+# VS Code settings (re-enable if you want to share them)
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json

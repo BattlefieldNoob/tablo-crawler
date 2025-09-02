@@ -1,7 +1,7 @@
-import { TabloClient, TavoloSummary } from "./http";
-import { hasMinimumParticipants, isWithinDistance, hasGenderBalance } from "./filter";
-import { formatDistance, formatSummary, formatTavoloMessage } from "./format";
 import type { AppConfig } from "./config";
+import { hasGenderBalance, hasMinimumParticipants, isWithinDistance } from "./filter";
+import { formatDistance, formatSummary, formatTavoloMessage } from "./format";
+import { TABLO_API_SUCCESS_CODE, TabloClient } from "./http";
 import type { MessageService } from "./message";
 
 export async function scanMultipleDays(client: TabloClient, message: MessageService, config: AppConfig) {
@@ -12,15 +12,15 @@ export async function scanMultipleDays(client: TabloClient, message: MessageServ
 
   for (let offset = 1; offset <= config.daysToScan; offset++) {
     const d = new Date(today.getTime() + offset * 86400000);
-    const dateString = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     const params = {
       mappa: "0",
       page: "0",
       orderType: "filtering",
-      raggio: "4",
-      lat: "45.408153",
-      lng: "11.875273",
+      raggio: config.searchRadius,
+      lat: config.latitude,
+      lng: config.longitude,
       dateTavolo: `["${dateString}"]`,
       ageMax: "37",
       ageMin: "18",
@@ -28,11 +28,19 @@ export async function scanMultipleDays(client: TabloClient, message: MessageServ
     };
 
     const list = await client.getTavoliNewOrder(params);
+    if (list.code !== TABLO_API_SUCCESS_CODE) {
+      console.warn(`⚠️  API returned error code ${list.code} for date ${dateString}`);
+      continue;
+    }
     totalFound += list.tavoli.length;
 
     const kept: { id: string; distance: string; }[] = [];
     for (const t of list.tavoli) {
       const full = await client.getTavolo(t.idTavolo);
+      if (full.code !== TABLO_API_SUCCESS_CODE) {
+        console.warn(`⚠️  API returned error code ${full.code} for table ${t.idTavolo}`);
+        continue;
+      }
       if (!hasMinimumParticipants(full.tavolo, config.minParticipants)) continue;
       if (!isWithinDistance(t.distanza, config.maxDistance)) continue;
       kept.push({ id: t.idTavolo, distance: t.distanza ?? "" });
@@ -46,7 +54,7 @@ export async function scanMultipleDays(client: TabloClient, message: MessageServ
       }
     }
 
-    kept.sort((a,b) => (Number(a.distance) || 1e9) - (Number(b.distance) || 1e9));
+    kept.sort((a, b) => (Number(a.distance) || 1e9) - (Number(b.distance) || 1e9));
     for (const k of kept) allProcessed.push([k.id, k.distance]);
   }
 

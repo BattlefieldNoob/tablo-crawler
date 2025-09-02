@@ -1,3 +1,6 @@
+// Tablo API constants
+export const TABLO_API_SUCCESS_CODE = 0;
+
 export interface UtentiInvitoResponse {
   code: number;
   message?: string;
@@ -24,6 +27,7 @@ export interface TavoliNewOrderResponse {
 }
 
 export interface TavoloSummary {
+  idPartecipanti: string[];
   idTavolo: string;
   distanza?: string;
   nomeRistorante?: string;
@@ -52,7 +56,7 @@ export interface Partecipante {
 }
 
 export class TabloClient {
-  constructor(private baseUrl: string, private authToken: string) {}
+  constructor(private baseUrl: string, private authToken: string) { }
 
   async getNewUtentiInvitoRistorante(idRistorante: string): Promise<UtentiInvitoResponse> {
     const url = new URL(`/tavoliService/getNewUtentiInvitoRistorante`, this.baseUrl);

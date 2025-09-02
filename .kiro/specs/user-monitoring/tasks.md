@@ -22,30 +22,52 @@
   - Set sensible defaults for monitoring configuration
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 2. Core Monitoring Services
-- [ ] 2.1 Create user ID file loader utility
+- [x] 2. Core Monitoring Services
+
+
+
+
+
+- [x] 2.1 Create user ID file loader utility
+
+
   - Implement `UserLoader` class in new file `src/user-loader.ts`
   - Support loading user IDs from text file with comment support (# prefix)
   - Parse and validate user IDs as numbers, skip invalid entries with warnings
   - Handle file not found and permission errors gracefully
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 2.2 Implement state management system
+- [x] 2.2 Implement state management system
+
+
   - Create `StateManager` class in new file `src/state-manager.ts`
   - Define `TableState`, `ParticipantState`, and `MonitoringState` interfaces
   - Implement JSON-based state persistence with atomic writes
   - Create state comparison logic to detect changes between scans
   - _Requirements: 3.1, 3.2_
 
-- [ ] 2.3 Build table change detection logic
+
+
+- [x] 2.3 Build table change detection logic
+
+
+
+
+
   - Create `TableTracker` class in new file `src/table-tracker.ts`
   - Implement user identification by matching `idUtente` against monitored user set
   - Create change detection algorithms for user joins/leaves and participant changes
   - Generate structured `StateChange` events for different scenarios
   - _Requirements: 3.3, 3.4, 3.5_
 
-- [ ] 3. Notification System
-- [ ] 3.1 Create specialized monitoring notification service
+- [x] 3. Notification System
+
+
+
+- [x] 3.1 Create specialized monitoring notification service
+
+
+
   - Implement `MonitoringNotifier` class in new file `src/monitoring-notifier.ts`
   - Extend existing `MessageService` interface with monitoring-specific methods
   - Format detailed Telegram messages for user joined/left events
@@ -53,8 +75,14 @@
   - Include comprehensive table and participant information in messages
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 4. Main Monitoring Service
-- [ ] 4.1 Implement core user monitoring service
+- [x] 4. Main Monitoring Service
+
+
+
+
+- [x] 4.1 Implement core user monitoring service
+
+
   - Create `UserMonitor` class in new file `src/user-monitor.ts`
   - Orchestrate continuous monitoring loop with configurable intervals
   - Coordinate user loading, table scanning, state comparison, and notifications
@@ -62,22 +90,34 @@
   - Handle graceful shutdown with state persistence
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 5. CLI Integration and Final Wiring
-- [ ] 5.1 Add watch-users CLI command
+- [x] 5. CLI Integration and Final Wiring
+
+
+
+
+
+- [x] 5.1 Add watch-users CLI command
+
+
   - Extend CLI in `src/index.ts` with new `watch-users` command
   - Add command-line options for user IDs file path, state file path, and scan interval
   - Integrate monitoring configuration with existing config building system
   - Wire up UserMonitor service with TabloClient and notification services
   - _Requirements: 5.1, 6.1, 6.2, 6.3_
 
-- [ ] 5.2 Integrate monitoring with existing table scanning
+
+
+- [x] 5.2 Integrate monitoring with existing table scanning
+
   - Modify table scanning logic to work with monitoring requirements
   - Ensure all tables are scanned regardless of gender balance or distance filters
   - Adapt existing API calls to retrieve complete table information for monitoring
   - Maintain compatibility with existing scan command functionality
+
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 5.3 Add comprehensive error handling and logging
+- [x] 5.3 Add comprehensive error handling and logging
+
   - Implement robust error handling for all file operations and API calls
   - Add detailed logging for monitoring events, state changes, and errors
   - Create recovery mechanisms for transient failures
