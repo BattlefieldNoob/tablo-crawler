@@ -9,6 +9,10 @@ export interface AppConfig {
   minParticipants: number;
   maxDistance: number; // km
   intervalSeconds: number; // for loop mode
+  // User monitoring configuration
+  userIdsFilePath: string;
+  stateFilePath: string;
+  monitoringIntervalSeconds: number;
 }
 
 export function buildConfig(partial: Partial<AppConfig>): AppConfig {
@@ -23,6 +27,10 @@ export function buildConfig(partial: Partial<AppConfig>): AppConfig {
     minParticipants: partial.minParticipants ?? Number(Bun.env.MIN_PARTICIPANTS ?? 2),
     maxDistance: partial.maxDistance ?? Number(Bun.env.MAX_DISTANCE ?? 10.0),
     intervalSeconds: partial.intervalSeconds ?? Number(Bun.env.INTERVAL_SECONDS ?? 300),
+    // User monitoring configuration
+    userIdsFilePath: partial.userIdsFilePath ?? Bun.env.USER_IDS_FILE_PATH ?? "monitored-users.txt",
+    stateFilePath: partial.stateFilePath ?? Bun.env.STATE_FILE_PATH ?? "monitoring-state.json",
+    monitoringIntervalSeconds: partial.monitoringIntervalSeconds ?? Number(Bun.env.MONITORING_INTERVAL_SECONDS ?? 60),
   };
 }
 

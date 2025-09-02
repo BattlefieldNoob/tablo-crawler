@@ -41,10 +41,14 @@ export interface TavoloDetails {
 }
 
 export interface Partecipante {
+  idUtente: string;
   sessoMaschile: boolean;
   nome: string;
   cognome: string;
   dataDiNascita: string;
+  partecipante: boolean;
+  avatar?: string;
+  isBrand?: boolean;
 }
 
 export class TabloClient {
