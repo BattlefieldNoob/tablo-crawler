@@ -1,0 +1,17 @@
+{
+  "name": "tablocrawler-ts-bun",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "users": "bun run src/index.ts users",
+    "scan": "bun run src/index.ts scan"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  }
+}
