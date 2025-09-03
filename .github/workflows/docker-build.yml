@@ -3,10 +3,30 @@ name: Build ARM64 Docker Image
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'tsconfig.json'
+      - 'bunfig.toml'
+      - 'mise.toml'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/**'
   release:
     types: [ published ]
   pull_request:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'tsconfig.json'
+      - 'bunfig.toml'
+      - 'mise.toml'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/**'
 
 env:
   REGISTRY: ghcr.io

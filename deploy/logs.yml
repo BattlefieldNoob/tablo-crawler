@@ -1,11 +1,23 @@
 ---
+# TabloCrawler Log Viewer
+# 
+# Usage examples:
+#   # View last 50 lines (default)
+#   ansible-playbook -i inventory.yml logs.yml
+#   
+#   # View last 100 lines
+#   ansible-playbook -i inventory.yml logs.yml -e lines=100
+#   
+#   # Follow logs in real-time (use Ctrl+C to stop)
+#   ansible-playbook -i inventory.yml logs.yml -e follow=true
+#   
+#   # Target specific host
+#   ansible-playbook -i inventory.yml logs.yml --limit pi4-001
+
 - name: View TabloCrawler logs on Raspberry Pi devices
   hosts: raspberry_pis
   become: yes
   gather_facts: no
-  
-  vars_files:
-    - vault.yml
   
   vars:
     log_lines: "{{ lines | default(50) }}"  # Default to last 50 lines
@@ -32,43 +44,30 @@
         msg: "Container {{ container_name }} does not exist on {{ inventory_hostname }}"
       when: not container_info.exists
       
-    - name: Get container logs
-      shell: "docker logs --tail {{ log_lines }} {{ container_name }}"
+    - name: Get container logs (static)
+      shell: "docker logs --tail {{ log_lines }} --timestamps {{ container_name }}"
       register: container_logs
       when: container_info.exists and not follow_logs
       
-    - name: Display container logs
+    - name: Display container logs header
       debug:
-        msg: |
-          ========================================
-          LOGS FROM {{ inventory_hostname }}
-          Container: {{ container_name }}
-          Last {{ log_lines }} lines
-          ========================================
-          {{ container_logs.stdout }}
-          ========================================
-          STDERR (if any):
-          {{ container_logs.stderr if container_logs.stderr else 'No errors' }}
-          ========================================
+        msg: "========== LOGS FROM {{ inventory_hostname }} - Container: {{ container_name }} =========="
       when: container_info.exists and not follow_logs
       
-    - name: Follow logs in real-time (use Ctrl+C to stop)
-      shell: "docker logs -f {{ container_name }}"
-      when: container_info.exists and follow_logs
-      ignore_errors: yes  # Allow Ctrl+C to interrupt
-      
-    - name: Get recent container events
-      shell: "docker events --filter container={{ container_name }} --since 1h --until now"
-      register: container_events
-      when: container_info.exists
-      ignore_errors: yes
-      
-    - name: Display container events
+    - name: Display container logs (clean output)
       debug:
-        msg: |
-          ========================================
-          RECENT EVENTS FOR {{ container_name }}
-          ========================================
-          {{ container_events.stdout if container_events.stdout else 'No recent events' }}
-          ========================================
-      when: container_info.exists and container_events is defined
+        var: container_logs.stdout_lines
+      when: container_info.exists and not follow_logs and container_logs.stdout_lines is defined
+      
+    - name: Display container errors (if any)
+      debug:
+        msg: "STDERR: {{ container_logs.stderr }}"
+      when: container_info.exists and not follow_logs and container_logs.stderr
+      
+    - name: Follow logs in real-time
+      shell: |
+        echo "========== FOLLOWING LOGS FROM {{ inventory_hostname }} - Container: {{ container_name }} =========="
+        echo "Press Ctrl+C to stop following logs"
+        docker logs -f --timestamps {{ container_name }}
+      when: container_info.exists and follow_logs
+      ignore_errors: yes
