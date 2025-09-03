@@ -58,97 +58,162 @@
   - Ensure builds validate without pushing to registry
   - _Requirements: 3.2_
 
-- [ ] 3. Create SSH-based deployment tool
-- [ ] 3.1 Create deployment tool structure
-  - Create `deploy/` directory structure
-  - Write `deploy/raspberry-pi-deploy.py` main deployment script
-  - Implement SSH connection management with key-based authentication
+- [x] 3. Create Ansible-based deployment automation
+
+
+
+
+
+- [x] 3.1 Create Ansible project structure
+
+
+
+
+
+  - Create `deploy/` directory structure with Ansible layout
+  - Write `deploy/ansible.cfg` configuration file
+  - Create `deploy/requirements.yml` for Ansible collections (community.docker)
   - _Requirements: 2.1, 4.1_
 
-- [ ] 3.2 Implement device inventory management
-  - Create `deploy/inventory.yml` schema and example file
-  - Implement inventory parsing and device discovery
+- [x] 3.2 Create Ansible inventory management
+
+
+
+
+
+  - Create `deploy/inventory.yml` using Ansible inventory format
+  - Define host groups and variables for Raspberry Pi devices
   - Support multiple device configurations with different environments
   - _Requirements: 4.1, 4.2_
 
-- [ ] 3.3 Implement Docker installation automation
-  - Add Docker installation detection and automated setup
+- [x] 3.3 Create Docker installation role
+
+
+
+
+
+  - Write `deploy/roles/docker/tasks/main.yml` for Docker installation
   - Handle different ARM64 distributions (Raspberry Pi OS, Ubuntu)
-  - Verify Docker service is running before deployment
+  - Verify Docker service is running and enabled
   - _Requirements: 2.2_
 
-- [ ] 3.4 Implement container deployment logic
-  - Pull ARM64 Docker images from registry
+- [x] 3.4 Create container deployment role
+
+
+
+
+
+  - Write `deploy/roles/tablocrawler/tasks/main.yml` for container management
+  - Use community.docker.docker_container module for deployment
   - Stop existing containers before deploying new ones
-  - Start new containers with proper configuration
   - _Requirements: 2.3, 2.6_
 
-- [ ] 4. Create configuration management system
-- [ ] 4.1 Create configuration templates
-  - Write Jinja2 templates for environment files
-  - Create `deploy/templates/docker-compose.yml.j2` template
-  - Create `deploy/templates/.env.j2` template for environment variables
+- [x] 4. Create Ansible configuration management
+
+
+
+
+
+- [x] 4.1 Create Ansible variable structure
+
+
+  - Create `deploy/group_vars/raspberry_pis.yml` for common variables
+  - Create `deploy/host_vars/` directory for host-specific variables
+  - Create `deploy/templates/docker-compose.yml.j2` Jinja2 template
   - _Requirements: 5.1, 5.2_
 
-- [ ] 4.2 Implement configuration deployment
-  - Template configuration files with device-specific values
-  - Deploy configuration files to target devices via SSH
-  - Create necessary directories and set proper permissions
-  - _Requirements: 2.4, 5.1_
+- [x] 4.2 Implement Ansible Vault for secrets
 
-- [ ] 4.3 Add secrets management
-  - Implement encrypted storage for sensitive configuration values
-  - Support environment-specific secret overrides
-  - Secure handling of API tokens and Telegram credentials
+
+  - Create `deploy/vault.yml` with encrypted sensitive variables
+  - Use `ansible-vault encrypt` for API tokens and Telegram credentials
+  - Configure vault password file or prompt for deployment
   - _Requirements: 5.3_
 
-- [ ] 5. Implement systemd service management
-- [ ] 5.1 Create systemd service templates
-  - Write systemd service file template for auto-startup
-  - Configure restart policies and failure handling
-  - Set up proper logging and monitoring
+
+
+- [x] 4.3 Create configuration deployment tasks
+
+
+
+
+
+  - Write Ansible tasks to template and deploy configuration files
+  - Create necessary directories with proper permissions using file module
+  - Use template module for Jinja2 template processing
+  - _Requirements: 2.4, 5.1_
+
+- [x] 5. Implement systemd service management with Ansible
+
+
+
+
+
+- [x] 5.1 Create systemd service templates
+
+
+  - Write `deploy/templates/tablocrawler.service.j2` template
+  - Configure restart policies and failure handling in template
+  - Set up proper logging and monitoring configuration
   - _Requirements: 2.5_
 
-- [ ] 5.2 Implement service deployment and management
-  - Deploy systemd service files to target devices
-  - Enable and start services automatically
-  - Implement service status checking and health validation
+- [x] 5.2 Create systemd management tasks
+
+
+  - Use ansible.builtin.template to deploy systemd service files
+  - Use ansible.builtin.systemd to enable and start services
+  - Implement service status checking using service_facts module
   - _Requirements: 2.5, 4.4_
 
-- [ ] 6. Add parallel deployment support
-- [ ] 6.1 Implement concurrent device deployment
-  - Add parallel processing for multiple device deployments
-  - Implement proper error handling for individual device failures
-  - Continue deployment to other devices when one fails
+- [x] 6. Create main Ansible playbook
+
+
+
+
+- [x] 6.1 Write main deployment playbook
+
+
+  - Create `deploy/playbook.yml` that orchestrates all roles
+  - Configure parallel execution using Ansible's built-in parallelism
+  - Implement proper error handling with rescue blocks
   - _Requirements: 4.2, 4.3_
 
-- [ ] 6.2 Add deployment status reporting
-  - Implement comprehensive deployment status reporting
-  - Log deployment results for each device
-  - Provide summary of successful and failed deployments
+- [x] 6.2 Add deployment validation and reporting
+
+
+  - Add post-deployment validation tasks to verify container health
+  - Use debug module for comprehensive deployment status reporting
+  - Configure Ansible to continue on failures for individual hosts
   - _Requirements: 4.3, 4.4_
 
-- [ ] 7. Implement configuration backup and rollback
-- [ ] 7.1 Add configuration backup functionality
-  - Backup existing configurations before applying changes
-  - Store backups with timestamps for version tracking
+- [ ] 7. Implement backup and rollback with Ansible
+- [ ] 7.1 Add configuration backup tasks
+  - Use ansible.builtin.copy to backup existing configurations with timestamps
+  - Create backup directory structure on target devices
+  - Store backups with version tracking using Ansible facts
   - _Requirements: 5.4_
 
-- [ ] 7.2 Implement rollback capabilities
-  - Support reverting to previous configuration versions
-  - Implement container rollback to previous image versions
-  - Add rollback validation and health checks
+- [ ] 7.2 Create rollback playbook
+  - Write `deploy/rollback.yml` playbook for reverting deployments
+  - Support reverting to previous configuration and container versions
+  - Add rollback validation using Ansible's uri and wait_for modules
   - _Requirements: 5.5_
 
-- [ ] 8. Create deployment documentation and examples
-- [ ] 8.1 Create deployment configuration examples
-  - Write example `deploy/inventory.yml` with multiple device configurations
-  - Create example environment-specific configuration files
-  - Document configuration options and their purposes
+- [ ] 8. Create Ansible documentation and examples
+- [ ] 8.1 Create Ansible configuration examples
+  - Write example `deploy/inventory.yml` with Ansible inventory format
+  - Create example `deploy/group_vars/` and `deploy/host_vars/` files
+  - Document Ansible variable structure and configuration options
   - _Requirements: 4.1, 5.1_
 
-- [ ] 8.2 Create deployment usage documentation
+- [x] 8.2 Create Ansible deployment documentation
+
+
+
+
+
   - Write comprehensive deployment guide in `deploy/README.md`
-  - Document initial setup process for SSH keys and device preparation
-  - Provide troubleshooting guide for common deployment issues
+  - Document Ansible installation and initial setup process
+  - Provide troubleshooting guide for common Ansible deployment issues
+  - Include example commands for running playbooks and managing vault
   - _Requirements: 2.1, 4.1_

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  tablocrawler:
+    image: "{{ docker_image }}:{{ image_tag }}"
+    container_name: "{{ container_name }}"
+    restart: "{{ container_restart_policy }}"
+    
+    env_file:
+      - "{{ config_directory }}/tablocrawler.env"
+    
+    volumes:
+      - "{{ data_directory }}:/app/data"
+      - "{{ config_directory }}:/app/config"
+      - "{{ log_directory | default(data_directory + '/logs') }}:/app/logs"
+    
+    command: ["watch-users"]
+    
+    # Health check to ensure container is working
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/data/monitoring-state.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

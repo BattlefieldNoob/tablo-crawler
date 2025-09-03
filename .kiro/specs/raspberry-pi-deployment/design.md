@@ -64,6 +64,7 @@ graph TB
 **Key Features**:
 - Uses native ARM64 GitHub runners for efficient builds
 - Builds only on push to main branch and on releases
+- Builds on pull requests for validation without registry push
 - Creates versioned tags for releases and latest tag for main branch
 - No connection to Raspberry Pi devices (deployment is manual)
 
@@ -82,95 +83,107 @@ graph TB
 - Proper signal handling for graceful shutdown
 - Volume mounts for configuration and state persistence
 
-### 3. SSH Deployment Tool
+### 3. Ansible Deployment Automation
 
-**File**: `deploy/raspberry-pi-deploy.py`
+**Files**: 
+- `deploy/playbook.yml` - Main Ansible playbook
+- `deploy/inventory.yml` - Ansible inventory file
+- `deploy/roles/` - Ansible roles for modular deployment
 
 **Responsibilities**:
-- Connect to Raspberry Pi devices via SSH
-- Install Docker if not present
-- Deploy and configure TabloCrawler containers
-- Manage systemd services for auto-restart
+- Connect to Raspberry Pi devices via SSH using Ansible
+- Install Docker if not present using ansible.builtin.package
+- Deploy and configure TabloCrawler containers using community.docker collection
+- Manage systemd services for auto-restart using ansible.builtin.systemd
 
 **Key Features**:
-- Inventory-based device management
-- Parallel deployment support
-- Configuration templating with Jinja2
-- Error handling and rollback capabilities
+- Native Ansible inventory management
+- Parallel deployment support via Ansible's built-in parallelism
+- Jinja2 templating integrated with Ansible
+- Idempotent operations and built-in error handling
+- Role-based organization for reusability
 
 ### 4. Configuration Management
 
 **Files**: 
-- `deploy/inventory.yml` - Device inventory
-- `deploy/templates/` - Configuration templates
-- `deploy/configs/` - Environment-specific configs
+- `deploy/inventory.yml` - Ansible inventory file
+- `deploy/group_vars/` - Group-specific variables
+- `deploy/host_vars/` - Host-specific variables
+- `deploy/templates/` - Jinja2 templates for configuration files
+- `deploy/vault.yml` - Ansible Vault for encrypted secrets
 
 **Responsibilities**:
-- Define target devices and their properties
-- Template configuration files for different environments
-- Manage secrets and sensitive configuration
+- Define target devices using Ansible inventory format
+- Template configuration files using Ansible's native Jinja2 support
+- Manage secrets using Ansible Vault encryption
+- Organize variables by groups and individual hosts
 
 ## Data Models
 
-### Device Inventory Schema
+### Ansible Inventory Schema
 
 ```yaml
-devices:
-  - name: "pi-kitchen"
-    host: "192.168.1.100"
-    user: "pi"
-    ssh_key: "~/.ssh/id_rsa"
-    environment: "production"
-    config_overrides:
-      monitoring_interval: 30
-      search_radius: "5"
-  - name: "pi-living-room"
-    host: "192.168.1.101"
-    user: "pi"
-    ssh_key: "~/.ssh/id_rsa"
-    environment: "production"
+all:
+  children:
+    raspberry_pis:
+      hosts:
+        pi-kitchen:
+          ansible_host: 192.168.1.100
+          ansible_user: pi
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          environment: production
+          monitoring_interval: 30
+          search_radius: "5"
+        pi-living-room:
+          ansible_host: 192.168.1.101
+          ansible_user: pi
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          environment: production
+      vars:
+        ansible_python_interpreter: /usr/bin/python3
 ```
 
-### Configuration Template Schema
+### Ansible Variables Schema
 
 ```yaml
-# Environment configuration
-tablo_auth_token: "{{ secrets.tablo_auth_token }}"
-telegram_bot_token: "{{ secrets.telegram_bot_token }}"
-telegram_chat_id: "{{ secrets.telegram_chat_id }}"
+# Group variables (group_vars/raspberry_pis.yml)
+docker_image: "ghcr.io/{{ github_repo }}/tablocrawler"
+image_tag: "{{ ansible_env.IMAGE_TAG | default('latest') }}"
+container_name: "tablocrawler-monitor"
 
-# Monitoring configuration
-user_ids_file_path: "/app/data/monitored-users.txt"
-state_file_path: "/app/data/monitoring-state.json"
-monitoring_interval_seconds: "{{ config.monitoring_interval | default(60) }}"
-days_to_scan: "{{ config.days_to_scan | default(3) }}"
+# Default configuration
+default_monitoring_interval: 60
+default_days_to_scan: 3
+default_search_latitude: "45.408153"
+default_search_longitude: "11.875273"
+default_search_radius: "4"
 
-# Location configuration
-search_latitude: "{{ config.latitude | default('45.408153') }}"
-search_longitude: "{{ config.longitude | default('11.875273') }}"
-search_radius: "{{ config.search_radius | default('4') }}"
+# Encrypted secrets (vault.yml)
+vault_tablo_auth_token: "encrypted_token_here"
+vault_telegram_bot_token: "encrypted_token_here"
+vault_telegram_chat_id: "encrypted_chat_id_here"
 ```
 
-### Docker Compose Template
+### Docker Compose Template (templates/docker-compose.yml.j2)
 
 ```yaml
 version: '3.8'
 services:
   tablocrawler:
-    image: "ghcr.io/{{ github_repo }}/tablocrawler:{{ image_tag }}"
-    container_name: tablocrawler-monitor
+    image: "{{ docker_image }}:{{ image_tag }}"
+    container_name: "{{ container_name }}"
     restart: unless-stopped
     environment:
-      - TABLO_AUTH_TOKEN={{ tablo_auth_token }}
-      - TELEGRAM_BOT_TOKEN={{ telegram_bot_token }}
-      - TELEGRAM_CHAT_ID={{ telegram_chat_id }}
+      - TABLO_AUTH_TOKEN={{ vault_tablo_auth_token }}
+      - TELEGRAM_BOT_TOKEN={{ vault_telegram_bot_token }}
+      - TELEGRAM_CHAT_ID={{ vault_telegram_chat_id }}
       - USER_IDS_FILE_PATH=/app/data/monitored-users.txt
       - STATE_FILE_PATH=/app/data/monitoring-state.json
-      - MONITORING_INTERVAL_SECONDS={{ monitoring_interval_seconds }}
-      - DAYS_TO_SCAN={{ days_to_scan }}
-      - SEARCH_LATITUDE={{ search_latitude }}
-      - SEARCH_LONGITUDE={{ search_longitude }}
-      - SEARCH_RADIUS={{ search_radius }}
+      - MONITORING_INTERVAL_SECONDS={{ monitoring_interval | default(default_monitoring_interval) }}
+      - DAYS_TO_SCAN={{ days_to_scan | default(default_days_to_scan) }}
+      - SEARCH_LATITUDE={{ search_latitude | default(default_search_latitude) }}
+      - SEARCH_LONGITUDE={{ search_longitude | default(default_search_longitude) }}
+      - SEARCH_RADIUS={{ search_radius | default(default_search_radius) }}
     volumes:
       - ./data:/app/data
       - ./config:/app/config
@@ -185,12 +198,12 @@ services:
 2. **Registry Push Failures**: Retry with exponential backoff
 3. **ARM64 Build Issues**: Validate GitHub ARM64 runner availability and configuration
 
-### SSH Deployment Error Handling
+### Ansible Deployment Error Handling
 
-1. **Connection Failures**: Skip unreachable devices, continue with others
-2. **Docker Installation Failures**: Provide manual installation instructions
-3. **Container Deployment Failures**: Rollback to previous version if available
-4. **Configuration Errors**: Validate templates before deployment
+1. **Connection Failures**: Ansible automatically skips unreachable hosts and continues with others
+2. **Docker Installation Failures**: Use Ansible's package module with proper error handling and retries
+3. **Container Deployment Failures**: Implement rollback tasks using Ansible handlers and rescue blocks
+4. **Configuration Errors**: Use Ansible's template validation and check mode for dry-run testing
 
 ### Container Runtime Error Handling
 
@@ -207,11 +220,12 @@ services:
 2. **Integration Tests**: Build test images and verify functionality
 3. **ARM64 Build Tests**: Verify ARM64 builds work correctly on native runners
 
-### Deployment Tool Testing
+### Ansible Playbook Testing
 
-1. **Unit Tests**: Test individual functions and modules
-2. **Integration Tests**: Test against local Docker containers
-3. **End-to-End Tests**: Deploy to test Raspberry Pi devices
+1. **Syntax Validation**: Use `ansible-playbook --syntax-check` for syntax validation
+2. **Dry Run Testing**: Use `ansible-playbook --check` for dry-run validation
+3. **Integration Tests**: Test against local Docker containers using Ansible
+4. **End-to-End Tests**: Deploy to test Raspberry Pi devices using staging inventory
 
 ### Container Testing
 
@@ -234,11 +248,12 @@ services:
 3. **Read-only Filesystem**: Mount application code as read-only
 4. **Secret Management**: Use environment variables for sensitive data
 
-### SSH Security
+### Ansible Security
 
-1. **Key-based Authentication**: Use SSH keys instead of passwords
+1. **Key-based Authentication**: Configure SSH keys in Ansible inventory
 2. **Limited User Privileges**: Use dedicated deployment user with minimal privileges
-3. **Connection Security**: Use SSH agent forwarding and connection multiplexing
+3. **Connection Security**: Leverage Ansible's built-in SSH connection management and multiplexing
+4. **Vault Encryption**: Use Ansible Vault for encrypting sensitive variables
 
 ### Configuration Security
 
@@ -251,23 +266,23 @@ services:
 ### Initial Setup
 
 1. **Generate SSH Keys**: Create deployment keys for Raspberry Pi access
-2. **Configure Inventory**: Define target devices and their properties
-3. **Set up Secrets**: Configure encrypted secrets for API tokens
-4. **Test Connectivity**: Verify SSH access to all target devices
+2. **Configure Ansible Inventory**: Define target devices in Ansible inventory format
+3. **Set up Ansible Vault**: Configure encrypted secrets using `ansible-vault`
+4. **Test Connectivity**: Verify SSH access using `ansible all -m ping`
 
-### Manual Deployment
+### Ansible Deployment
 
 1. **Image Build**: GitHub Actions builds and pushes new image automatically
-2. **Manual Deployment Trigger**: Developer runs deployment tool locally
-3. **Device Preparation**: Install Docker and create necessary directories
-4. **Configuration Deployment**: Template and deploy configuration files
-5. **Container Deployment**: Pull image and start containers
-6. **Health Verification**: Verify containers are running correctly
+2. **Manual Deployment Trigger**: Developer runs `ansible-playbook` command locally
+3. **Device Preparation**: Ansible installs Docker and creates necessary directories
+4. **Configuration Deployment**: Ansible templates and deploys configuration files
+5. **Container Deployment**: Ansible pulls image and starts containers using community.docker collection
+6. **Health Verification**: Ansible verifies containers are running using built-in modules
 
 ### Rollback Process
 
 1. **Identify Issues**: Monitor logs and health checks for problems
-2. **Stop Current Containers**: Gracefully stop problematic containers
-3. **Deploy Previous Version**: Use previous known-good image version
-4. **Verify Rollback**: Confirm previous version is working correctly
-5. **Investigate Issues**: Analyze logs to understand deployment problems
+2. **Stop Current Containers**: Use Ansible to gracefully stop problematic containers
+3. **Deploy Previous Version**: Run Ansible playbook with previous known-good image tag
+4. **Verify Rollback**: Use Ansible tasks to confirm previous version is working correctly
+5. **Investigate Issues**: Analyze logs using Ansible's log collection capabilities

@@ -1,0 +1,13 @@
+# Encrypted sensitive variables for TabloCrawler deployment
+# Use 'ansible-vault encrypt deploy/vault.yml' to encrypt this file
+# Use 'ansible-vault edit deploy/vault.yml' to edit encrypted content
+---
+# Tablo API authentication token
+vault_tablo_auth_token: "your_tablo_auth_token_here"
+
+# Telegram bot configuration
+vault_telegram_bot_token: "your_telegram_bot_token_here"
+vault_telegram_chat_id: "your_telegram_chat_id_here"
+
+# Additional secrets can be added here as needed
+# vault_additional_secret: "value"
