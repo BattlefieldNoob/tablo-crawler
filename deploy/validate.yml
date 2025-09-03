@@ -4,6 +4,9 @@
   gather_facts: yes
   strategy: free
   
+  vars_files:
+    - vault.yml
+  
   vars:
     validation_timeout: 30
     
@@ -47,11 +50,11 @@
             checksum_algorithm: md5
           register: config_integrity
           loop:
-            - "{{ app_config_dir }}/docker-compose.yml"
-            - "{{ app_data_dir }}/monitored-users.txt"
+            - "{{ config_directory }}/docker-compose.yml"
+            - "{{ data_directory }}/monitored-users.txt"
             
         - name: Check disk space usage
-          shell: df -h {{ app_data_dir }} | tail -1 | awk '{print $5}' | sed 's/%//'
+          shell: df -h {{ data_directory }} | tail -1 | awk '{print $5}' | sed 's/%//'
           register: disk_usage
           changed_when: false
           
@@ -75,7 +78,7 @@
               SYSTEM HEALTH:
               - Memory Available: {{ ansible_memory_mb.real.free }}MB / {{ ansible_memory_mb.real.total }}MB
               - CPU Cores: {{ ansible_processor_count }}
-              - Disk Usage ({{ app_data_dir }}): {{ disk_usage.stdout }}%
+              - Disk Usage ({{ data_directory }}): {{ disk_usage.stdout }}%
               - Docker Service: {{ ansible_facts.services['docker.service'].state }}
               
               CONTAINER HEALTH:

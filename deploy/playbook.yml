@@ -5,6 +5,9 @@
   gather_facts: yes
   strategy: free  # Enable parallel execution across hosts
   
+  vars_files:
+    - vault.yml
+  
   vars:
     max_fail_percentage: 50  # Continue if less than 50% of hosts fail
     
@@ -50,9 +53,9 @@
             path: "{{ item }}"
           register: config_files
           loop:
-            - "{{ app_data_dir }}/monitored-users.txt"
-            - "{{ app_config_dir }}/docker-compose.yml"
-          failed_when: not config_files.results | selectattr('stat.exists') | list
+            - "{{ data_directory }}/monitored-users.txt"
+            - "{{ config_directory }}/docker-compose.yml"
+          failed_when: not config_files.stat.exists
           
         - name: Check Docker service status
           service_facts:
@@ -100,8 +103,8 @@
               - Container Responsive: {{ 'Yes' if container_test.rc == 0 else 'No' }}
               
               CONFIGURATION:
-              - Data Directory: {{ app_data_dir }}
-              - Config Directory: {{ app_config_dir }}
+              - Data Directory: {{ data_directory }}
+              - Config Directory: {{ config_directory }}
               - Monitored Users File: {{ 'Present' if config_files.results[0].stat.exists else 'Missing' }}
               - Docker Compose File: {{ 'Present' if config_files.results[1].stat.exists else 'Missing' }}
               
@@ -131,7 +134,7 @@
               2. Check container logs: docker logs {{ container_name }}
               3. Verify network connectivity to registry
               4. Check disk space: df -h
-              5. Review configuration files in {{ app_config_dir }}
+              5. Review configuration files in {{ config_directory }}
               
               STATUS: FAILED
               ========================================

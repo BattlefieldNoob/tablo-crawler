@@ -129,22 +129,38 @@ ssh-copy-id pi@raspberrypi.local
 ssh pi@raspberrypi.local "echo 'Connection successful'"
 ```
 
-### 2. Create Vault File
+### 2. Configure Secrets
 ```bash
 cd deploy
-ansible-vault create vault.yml
+
+# Edit the vault file and replace placeholder values with your actual tokens
+nano vault.yml  # or use your preferred editor
+
+# After adding your tokens, encrypt the file
+ansible-vault encrypt vault.yml
 ```
 
-Add your secrets:
+Required secrets in `vault.yml`:
 ```yaml
-vault_tablo_auth_token: "your_tablo_auth_token_here"
-vault_telegram_bot_token: "your_telegram_bot_token_here"  # optional
-vault_telegram_chat_id: "your_telegram_chat_id_here"     # optional
+vault_tablo_auth_token: "your_actual_tablo_token_here"  # Required
+vault_telegram_bot_token: ""                           # Optional (leave empty to disable)
+vault_telegram_chat_id: ""                             # Optional (leave empty to disable)
 ```
 
-### 3. Deploy
+### 3. Build Docker Image (First Time)
 ```bash
-ansible-playbook -i inventory.yml playbook.yml
+# Build the Docker image locally on your Pi or push to a registry
+# Option 1: Build directly on Pi (recommended for development)
+ssh pi@raspberrypi.local "cd /tmp && git clone <your-repo-url> && cd tablocrawler && docker build -t tablocrawler ."
+
+# Option 2: Build locally and save/load (if you have Docker on your machine)
+# docker build -t tablocrawler .
+# docker save tablocrawler | ssh pi@raspberrypi.local "docker load"
+```
+
+### 4. Deploy
+```bash
+ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass
 ```
 
 ### 4. Verify
@@ -177,22 +193,31 @@ all:
 
 For multiple devices or different environments, you can expand this configuration.
 
-### 2. Group Variables
+### 2. Docker Image Configuration
 
-Configure common settings in `deploy/group_vars/raspberry_pis.yml`:
+The deployment expects a Docker image named `tablocrawler`. You have several options:
 
+#### Option A: Local Image (Recommended for Development)
+Build the image directly on your Pi:
+```bash
+ssh pi@raspberrypi.local
+git clone <your-repo-url>
+cd tablocrawler
+docker build -t tablocrawler .
+```
+
+#### Option B: Registry Image
+If you want to use a registry (GitHub Container Registry, Docker Hub, etc.), update `deploy/group_vars/raspberry_pis.yml`:
 ```yaml
-# Docker configuration
-docker_image: "ghcr.io/your-username/tablocrawler"
+github_repo: "ghcr.io/your-username/tablocrawler"  # Full registry path
+docker_image: "{{ github_repo }}"
 image_tag: "latest"
-container_name: "tablocrawler-monitor"
+```
 
-# Default monitoring settings
-default_monitoring_interval: 60
-default_days_to_scan: 3
-default_search_latitude: "45.408153"
-default_search_longitude: "11.875273"
-default_search_radius: "4"
+#### Option C: Custom Image Name
+```yaml
+docker_image: "my-custom-tablocrawler-image"
+image_tag: "v1.0.0"
 ```
 
 ### 3. Custom Configuration (Optional)
@@ -367,7 +392,17 @@ ansible -i inventory.yml development -m docker_container -a "name=tablocrawler-m
 - Verify correct IP address in inventory
 - Test manual SSH connection: `ssh pi@192.168.1.100`
 
-#### 2. Permission Denied Errors
+#### 2. Docker Python SDK Missing
+
+**Problem**: `ModuleNotFoundError: No module named 'docker'`
+
+**Solutions**:
+- The Docker role should install this automatically
+- Manual installation on Pi: `sudo pip3 install docker>=5.0.0`
+- Verify Python path: Check `ansible_python_interpreter` in inventory
+- Re-run the Docker role: `ansible-playbook -i inventory.yml playbook.yml --tags docker`
+
+#### 3. Permission Denied Errors
 
 **Problem**: `FAILED! => {"changed": false, "msg": "Permission denied"}`
 
@@ -376,7 +411,7 @@ ansible -i inventory.yml development -m docker_container -a "name=tablocrawler-m
 - Use become (sudo) in playbook: `become: yes`
 - Check file permissions on SSH keys: `chmod 600 ~/.ssh/id_rsa`
 
-#### 3. Docker Installation Failures
+#### 4. Docker Installation Failures
 
 **Problem**: Docker installation fails or times out
 
@@ -386,7 +421,7 @@ ansible -i inventory.yml development -m docker_container -a "name=tablocrawler-m
 - Use alternative Docker installation method
 - Manually install Docker first: `curl -fsSL https://get.docker.com | sh`
 
-#### 4. Container Pull Failures
+#### 5. Container Pull Failures
 
 **Problem**: `Error response from daemon: pull access denied`
 
@@ -396,7 +431,7 @@ ansible -i inventory.yml development -m docker_container -a "name=tablocrawler-m
 - Login to registry manually: `docker login ghcr.io`
 - Use public registry or configure authentication
 
-#### 5. Ansible Vault Issues
+#### 6. Ansible Vault Issues
 
 **Problem**: `ERROR! Attempting to decrypt but no vault secrets found`
 
@@ -405,7 +440,7 @@ ansible -i inventory.yml development -m docker_container -a "name=tablocrawler-m
 - Check vault password file path in ansible.cfg
 - Verify vault file is properly encrypted: `ansible-vault view vault.yml`
 
-#### 6. Container Start Failures
+#### 7. Container Start Failures
 
 **Problem**: Docker container fails to start
 

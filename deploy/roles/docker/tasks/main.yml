@@ -22,6 +22,7 @@
       - curl
       - gnupg
       - lsb-release
+      - python3-pip
     state: present
   when: ansible_os_family == "Debian"
   become: yes
@@ -64,6 +65,18 @@
     state: present
   when: ansible_os_family == "Debian"
   become: yes
+
+- name: Install Docker Python SDK for Ansible (system packages)
+  ansible.builtin.apt:
+    name:
+      - python3-docker
+      - python3-dockerpty
+    state: present
+  when: ansible_os_family == "Debian"
+  become: yes
+
+# Note: Using docker compose command instead of Python package
+# The docker-compose-plugin provides the 'docker compose' command
 
 - name: Add user to docker group
   ansible.builtin.user:

@@ -1,7 +1,7 @@
 # Development environment specific variables
 ---
 environment: "development"
-image_tag: "dev"
+image_tag: "latest"
 log_level: "debug"
 enable_telegram: false
 backup_retention_days: 3

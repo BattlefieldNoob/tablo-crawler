@@ -1,7 +1,9 @@
 # Common variables for all Raspberry Pi devices
 ---
 # Docker configuration
-docker_image: "ghcr.io/{{ github_repo | default('your-org/tablocrawler') }}/tablocrawler"
+github_repo: "tablo-crawler"  # Default image name
+github_user: "battlefieldnoob"
+docker_image: "ghcr.io/{{ github_user | default('your-org') }}/{{ github_repo | default('tablo-crawler') }}"
 image_tag: "{{ ansible_env.IMAGE_TAG | default('latest') }}"
 container_name: "tablocrawler-monitor"
 

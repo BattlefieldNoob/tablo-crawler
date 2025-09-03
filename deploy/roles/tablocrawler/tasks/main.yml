@@ -2,6 +2,12 @@
 # TabloCrawler Container Deployment Role
 # This role manages the deployment of TabloCrawler containers on Raspberry Pi devices
 
+- name: Create tablocrawler system group
+  ansible.builtin.group:
+    name: "{{ tablocrawler_group }}"
+    system: true
+  become: true
+
 - name: Create tablocrawler system user
   ansible.builtin.user:
     name: "{{ tablocrawler_user }}"
@@ -10,12 +16,6 @@
     shell: /bin/false
     home: "{{ data_directory }}"
     create_home: false
-  become: true
-
-- name: Create tablocrawler system group
-  ansible.builtin.group:
-    name: "{{ tablocrawler_group }}"
-    system: true
   become: true
 
 - name: Create application directories with proper permissions
@@ -62,15 +62,13 @@
     force_source: true
   register: image_pull_result
 
-- name: Deploy TabloCrawler container using docker-compose
-  community.docker.docker_compose:
-    project_src: "{{ config_directory }}"
-    project_name: tablocrawler
-    state: present
-    pull: false  # We already pulled the image above
-    recreate: "{{ 'always' if (compose_config_result is defined and compose_config_result.changed) or (env_config_result is defined and env_config_result.changed) else 'smart' }}"
+- name: Deploy TabloCrawler container using docker compose command
+  ansible.builtin.command:
+    cmd: docker compose -p tablocrawler up -d
+    chdir: "{{ config_directory }}"
   become: true
   register: container_deploy_result
+  changed_when: "'Started' in container_deploy_result.stderr or 'Created' in container_deploy_result.stderr"
 
 - name: Ensure container has proper ownership of data files
   ansible.builtin.file:
