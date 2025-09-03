@@ -15,7 +15,7 @@ all:
               location: "development"
               monitoring_interval: 300
               search_radius: "15"
-              days_to_scan: 1
+              days_to_scan: 10
               search_latitude: "45.408153"
               search_longitude: "11.875273"
               
@@ -31,7 +31,7 @@ all:
         
         # Default application settings
         default_monitoring_interval: 60
-        default_days_to_scan: 3
+        default_days_to_scan: 10
         default_search_latitude: "45.408153"
         default_search_longitude: "11.875273"
         default_search_radius: "4"
@@ -64,7 +64,7 @@ all:
         environment: "staging"
         image_tag: "staging"
         log_level: "debug"
-        enable_telegram: false
+        enable_telegram: true
         backup_retention_days: 7
         
     development:
@@ -72,5 +72,5 @@ all:
         environment: "development"
         image_tag: "dev"
         log_level: "debug"
-        enable_telegram: false
+        enable_telegram: true
         backup_retention_days: 3

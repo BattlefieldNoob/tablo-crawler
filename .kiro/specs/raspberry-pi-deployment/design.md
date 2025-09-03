@@ -153,7 +153,7 @@ container_name: "tablocrawler-monitor"
 
 # Default configuration
 default_monitoring_interval: 60
-default_days_to_scan: 3
+default_days_to_scan: 10
 default_search_latitude: "45.408153"
 default_search_longitude: "11.875273"
 default_search_radius: "4"

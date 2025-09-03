@@ -2,6 +2,24 @@
 # Configuration deployment tasks for TabloCrawler
 # This file handles templating and deployment of all configuration files
 
+- name: Get tablocrawler user information
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ tablocrawler_user }}"
+  register: tablocrawler_user_info
+  become: true
+  tags:
+    - configuration
+    - user-info
+
+- name: Set user ID and group ID facts
+  ansible.builtin.set_fact:
+    tablocrawler_uid: "{{ tablocrawler_user_info.ansible_facts.getent_passwd[tablocrawler_user][1] }}"
+    tablocrawler_gid: "{{ tablocrawler_user_info.ansible_facts.getent_passwd[tablocrawler_user][2] }}"
+  tags:
+    - configuration
+    - user-info
+
 - name: Create configuration directories with proper permissions
   ansible.builtin.file:
     path: "{{ item.path }}"
@@ -67,7 +85,55 @@
     - configuration
     - logging
 
-- name: Create monitored users file if it doesn't exist
+- name: Copy monitored users file from local source
+  ansible.builtin.copy:
+    src: "{{ monitored_users_file | default('../monitored-users.txt') }}"
+    dest: "{{ data_directory }}/monitored-users.txt"
+    owner: "{{ tablocrawler_user }}"
+    group: "{{ tablocrawler_group }}"
+    mode: '0644'
+    backup: true
+  become: true
+  when: monitored_users_file is defined or monitored_users_file_path is defined or (monitored_users_file | default('../monitored-users.txt')) is file
+  register: monitored_users_copy_result
+  tags:
+    - configuration
+    - data-files
+    - monitored-users
+
+- name: Create monitored users file from content variable
+  ansible.builtin.copy:
+    content: "{{ monitored_users_content }}"
+    dest: "{{ data_directory }}/monitored-users.txt"
+    owner: "{{ tablocrawler_user }}"
+    group: "{{ tablocrawler_group }}"
+    mode: '0644'
+    backup: true
+  become: true
+  when: monitored_users_content is defined
+  register: monitored_users_content_result
+  tags:
+    - configuration
+    - data-files
+    - monitored-users
+
+- name: Create monitored users file from template
+  ansible.builtin.template:
+    src: "{{ monitored_users_template | default('monitored-users.txt.j2') }}"
+    dest: "{{ data_directory }}/monitored-users.txt"
+    owner: "{{ tablocrawler_user }}"
+    group: "{{ tablocrawler_group }}"
+    mode: '0644'
+    backup: true
+  become: true
+  when: monitored_users_template is defined and monitored_users_content is not defined
+  register: monitored_users_template_result
+  tags:
+    - configuration
+    - data-files
+    - monitored-users
+
+- name: Create empty monitored users file if no source provided
   ansible.builtin.file:
     path: "{{ data_directory }}/monitored-users.txt"
     state: touch
@@ -77,9 +143,14 @@
     modification_time: preserve
     access_time: preserve
   become: true
+  when: >
+    monitored_users_content is not defined and
+    monitored_users_template is not defined and
+    not (monitored_users_file is defined or monitored_users_file_path is defined or (monitored_users_file | default('../monitored-users.txt')) is file)
   tags:
     - configuration
     - data-files
+    - monitored-users
 
 - name: Create initial monitoring state file if it doesn't exist
   ansible.builtin.copy:
@@ -121,6 +192,37 @@
     - configuration
     - permissions
 
+- name: Ensure data directory has write permissions for tablocrawler user
+  ansible.builtin.file:
+    path: "{{ data_directory }}"
+    owner: "{{ tablocrawler_user }}"
+    group: "{{ tablocrawler_group }}"
+    mode: '0755'
+    recurse: true
+  become: true
+  tags:
+    - configuration
+    - permissions
+
+- name: Verify monitored-users.txt content
+  ansible.builtin.command:
+    cmd: "cat {{ data_directory }}/monitored-users.txt"
+  register: monitored_users_content_check
+  become: true
+  changed_when: false
+  tags:
+    - configuration
+    - verification
+
+- name: Display monitored users file content
+  ansible.builtin.debug:
+    msg: |
+      Monitored users file content:
+      {{ monitored_users_content_check.stdout }}
+  tags:
+    - configuration
+    - verification
+
 - name: Validate configuration file syntax
   ansible.builtin.command:
     cmd: docker compose -f {{ config_directory }}/docker-compose.yml config --quiet
@@ -138,6 +240,7 @@
       - Docker Compose config: {{ 'UPDATED' if compose_config_result.changed else 'UNCHANGED' }}
       - Environment config: {{ 'UPDATED' if env_config_result.changed else 'UNCHANGED' }}
       - Logging config: {{ 'UPDATED' if logging_config_result.changed else 'UNCHANGED' }}
+      - Monitored users file: {{ 'COPIED' if monitored_users_copy_result.changed | default(false) else ('TEMPLATED' if monitored_users_template_result.changed | default(false) else ('CONTENT' if monitored_users_content_result.changed | default(false) else 'UNCHANGED')) }}
       - Configuration validation: {{ 'PASSED' if config_validation.rc == 0 else 'FAILED' }}
       - Config directory: {{ config_directory }}
       - Data directory: {{ data_directory }}

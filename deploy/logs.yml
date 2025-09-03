@@ -1,0 +1,74 @@
+---
+- name: View TabloCrawler logs on Raspberry Pi devices
+  hosts: raspberry_pis
+  become: yes
+  gather_facts: no
+  
+  vars_files:
+    - vault.yml
+  
+  vars:
+    log_lines: "{{ lines | default(50) }}"  # Default to last 50 lines
+    follow_logs: "{{ follow | default(false) }}"  # Set to true to follow logs in real-time
+    
+  tasks:
+    - name: Check if container exists
+      community.docker.docker_container_info:
+        name: "{{ container_name }}"
+      register: container_info
+      
+    - name: Display container status
+      debug:
+        msg: |
+          Container Status on {{ inventory_hostname }}:
+          - Name: {{ container_info.container.Name | default('N/A') }}
+          - Status: {{ container_info.container.State.Status | default('N/A') }}
+          - Started: {{ container_info.container.State.StartedAt | default('N/A') }}
+          - Restart Count: {{ container_info.container.RestartCount | default('N/A') }}
+      when: container_info.exists
+      
+    - name: Fail if container doesn't exist
+      fail:
+        msg: "Container {{ container_name }} does not exist on {{ inventory_hostname }}"
+      when: not container_info.exists
+      
+    - name: Get container logs
+      shell: "docker logs --tail {{ log_lines }} {{ container_name }}"
+      register: container_logs
+      when: container_info.exists and not follow_logs
+      
+    - name: Display container logs
+      debug:
+        msg: |
+          ========================================
+          LOGS FROM {{ inventory_hostname }}
+          Container: {{ container_name }}
+          Last {{ log_lines }} lines
+          ========================================
+          {{ container_logs.stdout }}
+          ========================================
+          STDERR (if any):
+          {{ container_logs.stderr if container_logs.stderr else 'No errors' }}
+          ========================================
+      when: container_info.exists and not follow_logs
+      
+    - name: Follow logs in real-time (use Ctrl+C to stop)
+      shell: "docker logs -f {{ container_name }}"
+      when: container_info.exists and follow_logs
+      ignore_errors: yes  # Allow Ctrl+C to interrupt
+      
+    - name: Get recent container events
+      shell: "docker events --filter container={{ container_name }} --since 1h --until now"
+      register: container_events
+      when: container_info.exists
+      ignore_errors: yes
+      
+    - name: Display container events
+      debug:
+        msg: |
+          ========================================
+          RECENT EVENTS FOR {{ container_name }}
+          ========================================
+          {{ container_events.stdout if container_events.stdout else 'No recent events' }}
+          ========================================
+      when: container_info.exists and container_events is defined

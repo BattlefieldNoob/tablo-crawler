@@ -6,6 +6,9 @@ services:
     container_name: "{{ container_name }}"
     restart: "{{ container_restart_policy }}"
     
+    # Run as the tablocrawler user to match file permissions
+    user: "{{ tablocrawler_uid | default('1000') }}:{{ tablocrawler_gid | default('1000') }}"
+    
     env_file:
       - "{{ config_directory }}/tablocrawler.env"
     

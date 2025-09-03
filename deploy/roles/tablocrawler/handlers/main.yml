@@ -3,12 +3,9 @@
 # These handlers are triggered when configuration changes occur
 
 - name: restart tablocrawler container
-  community.docker.docker_compose:
-    project_src: "{{ config_directory }}"
-    project_name: tablocrawler
-    state: present
-    recreate: always
-    pull: false
+  ansible.builtin.command:
+    cmd: docker compose -p tablocrawler up -d --force-recreate
+    chdir: "{{ config_directory }}"
   become: true
   listen: "restart tablocrawler container"
 

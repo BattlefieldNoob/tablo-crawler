@@ -228,6 +228,42 @@ For your single Pi setup, all configuration is in the inventory.yml file. If you
 - Modify the development group variables in `deploy/group_vars/development.yml`
 - Override variables in the vault file
 
+### 4. Monitored Users Configuration
+
+You have several options to configure the `monitored-users.txt` file:
+
+#### Option A: Copy from Local File (Recommended)
+Place your `monitored-users.txt` file in the deploy directory and run:
+```bash
+ansible-playbook -i inventory.yml playbook.yml
+```
+
+The playbook will automatically copy `../monitored-users.txt` if it exists.
+
+#### Option B: Specify Custom File Path
+```bash
+ansible-playbook -i inventory.yml playbook.yml -e "monitored_users_file=/path/to/your/monitored-users.txt"
+```
+
+#### Option C: Use Content Variable
+```bash
+ansible-playbook -i inventory.yml playbook.yml -e "monitored_users_content='12345\n67890\n98765'"
+```
+
+#### Option D: Use Template with User List
+Add to your inventory or group vars:
+```yaml
+monitored_users_list:
+  - "12345"
+  - "67890"
+  - "98765"
+```
+
+Then run:
+```bash
+ansible-playbook -i inventory.yml playbook.yml -e "monitored_users_template=monitored-users.txt.j2"
+```
+
 ### 4. Secrets Management with Ansible Vault
 
 Create encrypted secrets file:
@@ -299,6 +335,68 @@ ansible-playbook -i inventory.yml playbook.yml --check
 Run with detailed output for debugging:
 ```bash
 ansible-playbook -i inventory.yml playbook.yml -vvv
+```
+
+## Update and Maintenance Commands
+
+### Pull Latest Docker Images Only
+```bash
+# Pull latest images without updating containers
+ansible-playbook -i inventory.yml pull.yml
+
+# Force pull even if image exists locally
+ansible-playbook -i inventory.yml pull.yml -e "force=true"
+
+# Pull specific image tag
+ansible-playbook -i inventory.yml pull.yml -e "image_tag=v1.2.3"
+```
+
+### Update Configuration Only
+```bash
+# Update configuration files and restart containers
+ansible-playbook -i inventory.yml config-only.yml
+
+# Update configuration without restarting containers
+ansible-playbook -i inventory.yml config-only.yml -e "restart=false"
+
+# Update configuration without creating backups
+ansible-playbook -i inventory.yml config-only.yml -e "backup=false"
+
+# Update with custom monitored users file
+ansible-playbook -i inventory.yml config-only.yml -e "monitored_users_file=/path/to/users.txt"
+
+# Update with inline user content
+ansible-playbook -i inventory.yml config-only.yml -e "monitored_users_content='12345\n67890'"
+```
+
+### Complete Update (Image + Configuration)
+```bash
+# Pull new image and update configuration
+ansible-playbook -i inventory.yml update.yml
+
+# Update without pulling new image
+ansible-playbook -i inventory.yml update.yml -e "pull=false"
+
+# Update configuration only, skip container restart
+ansible-playbook -i inventory.yml update.yml -e "restart=false"
+
+# Update image only, skip configuration
+ansible-playbook -i inventory.yml update.yml -e "config=false"
+
+# Force pull new image even if up-to-date
+ansible-playbook -i inventory.yml update.yml -e "pull=true"
+```
+
+### Targeted Updates
+```bash
+# Update only docker-compose configuration
+ansible-playbook -i inventory.yml config-only.yml --tags docker-compose
+
+# Update only monitored users file
+ansible-playbook -i inventory.yml config-only.yml --tags monitored-users
+
+# Update only environment variables
+ansible-playbook -i inventory.yml config-only.yml --tags environment
 ```
 
 ## Ansible Vault Management
@@ -570,6 +668,97 @@ Enable additional output plugins:
 [defaults]
 stdout_callback = debug
 callback_whitelist = timer, profile_tasks
+```
+
+## Log Management and Troubleshooting
+
+### View Container Logs
+
+#### Quick Log Check (Last 50 lines)
+```bash
+# View logs from all Raspberry Pi devices
+ansible-playbook -i inventory.yml logs.yml
+
+# View more lines
+ansible-playbook -i inventory.yml logs.yml -e "lines=100"
+
+# View logs from specific host
+ansible-playbook -i inventory.yml logs.yml --limit pi-dev
+```
+
+#### Follow Logs in Real-Time
+```bash
+# Follow logs (use Ctrl+C to stop)
+ansible-playbook -i inventory.yml logs.yml -e "follow=true"
+```
+
+#### Manual Log Commands
+```bash
+# SSH to Pi and check logs manually
+ssh pi@raspberrypi.local
+docker logs tablocrawler-monitor
+
+# Follow logs manually
+docker logs -f tablocrawler-monitor
+
+# Get last 100 lines with timestamps
+docker logs --tail 100 -t tablocrawler-monitor
+```
+
+### Comprehensive Troubleshooting
+
+#### Full System Diagnostics
+```bash
+# Run complete troubleshooting playbook
+ansible-playbook -i inventory.yml troubleshoot.yml
+
+# Troubleshoot specific host
+ansible-playbook -i inventory.yml troubleshoot.yml --limit pi-dev
+```
+
+This will provide:
+- System information (OS, memory, disk space)
+- Docker service status
+- Container status and configuration
+- Recent container logs
+- Network connectivity tests
+- Configuration file status
+- Troubleshooting recommendations
+
+#### Quick Status Checks
+```bash
+# Check if containers are running
+ansible -i inventory.yml raspberry_pis -m command -a "docker ps --filter name=tablocrawler"
+
+# Check container health
+ansible -i inventory.yml raspberry_pis -m command -a "docker inspect --format='{{.State.Health.Status}}' tablocrawler-monitor"
+
+# Check system resources
+ansible -i inventory.yml raspberry_pis -m command -a "free -h && df -h"
+```
+
+### Log Analysis Tips
+
+#### Common Log Patterns to Look For
+- **Startup Issues**: Look for errors during container initialization
+- **API Connectivity**: Check for HTTP errors or timeout messages
+- **Authentication**: Verify Tablo API token is working
+- **Memory Issues**: Watch for out-of-memory errors
+- **Network Problems**: Look for DNS resolution or connection failures
+
+#### Useful Log Commands
+```bash
+# Search for errors in logs
+docker logs tablocrawler-monitor 2>&1 | grep -i error
+
+# Check for API authentication issues
+docker logs tablocrawler-monitor 2>&1 | grep -i "auth\|token\|401\|403"
+
+# Monitor resource usage
+docker stats tablocrawler-monitor
+
+# Check container restart count
+docker inspect tablocrawler-monitor | grep -i restartcount
 ```
 
 ## Support and Resources
