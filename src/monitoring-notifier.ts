@@ -1,6 +1,6 @@
+import { Partecipante, TavoloDetails } from './http';
 import { MessageService } from './message';
-import { TavoloDetails, Partecipante } from './http';
-import { StateChange, ParticipantState } from './state-manager';
+import { ParticipantState, StateChange } from './state-manager';
 
 export interface MonitoringNotifier extends MessageService {
     sendUserJoinedNotification(change: StateChange, tableDetails: TavoloDetails): Promise<void>;
@@ -58,7 +58,7 @@ export class DetailedMonitoringNotifier implements MonitoringNotifier {
         const message = [
             `${emoji} PARTICIPANT ${action} MONITORED TABLE`,
             ``,
-            `👤 Participant: ${change.participantName}`,
+            `👤 Participant: ${change.participantName} (ID: ${change.participantId})`,
             `🏪 Restaurant: ${change.tableName}`,
             `📍 Table ID: ${change.tableId}`,
             `${monitoredUsersList}`,

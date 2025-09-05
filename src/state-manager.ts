@@ -29,6 +29,7 @@ export interface StateChange {
   tableName: string;
   monitoredUserId?: number;
   participantName?: string;
+  participantId?: string;
   details: any;
 }
 
@@ -161,6 +162,7 @@ export class JsonStateManager implements StateManager {
                 tableId,
                 tableName: currentTable.nomeRistorante,
                 participantName: `${participant.nome} ${participant.cognome}`,
+                participantId: participant.idUtente,
                 details: { table: currentTable, participant }
               });
             }
@@ -191,6 +193,7 @@ export class JsonStateManager implements StateManager {
                 tableId,
                 tableName: previousTable.nomeRistorante,
                 participantName: `${participant.nome} ${participant.cognome}`,
+                participantId: participant.idUtente,
                 details: { participant }
               });
             }
